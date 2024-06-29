@@ -8,6 +8,8 @@ import seaborn as sns
 from tqdm import tqdm #progress bar
 import gymnasium as gym
 
+import time
+
 env = gym.make('Blackjack-v1', sab=True, render_mode="rgb_array") 
 
 #reset the environment to get the first observation
@@ -83,8 +85,8 @@ class BlackjackAgent:
         self.epsilon = max(self.final_epsilon, self.epsilon - epsilon_decay)
 
 # Hyparameters
-learning_rate = 0.01 #0.001
-n_episodes = 100_000 #10_000_000
+learning_rate = 0.001
+n_episodes = 10_000_000
 start_epsilon = 1.0
 epsilon_decay = start_epsilon / (n_episodes / 2)
 final_epsilon = 0.1
@@ -228,5 +230,43 @@ plt.show()
 value_grid, policy_grid = create_grids(agent, usable_ace=False)
 fig1 = create_plots(value_grid, policy_grid, title="Without usable ace")
 plt.show()
+
+#stop learning and play purely based off policy (and render the game too)
+n_episodes = 50
+episodes_won = 0
+episodes_lost = 0
+episodes_drawn = 0
+
+env = gym.make('Blackjack-v1', sab=True, render_mode="human") 
+
+done = False
+observation,info = env.reset()
+
+for episode in tqdm(range(n_episodes)):
+    obs, info = env.reset()
+    done = False
+
+    #play one episode
+    #env.render()
+    while not done:
+        action = int(np.argmax(agent.q_values[obs]))
+        next_obs, reward, terminated, truncated, info = env.step(action)
+
+        done = terminated or truncated
+        obs = next_obs
+
+    if(reward == 0.0):
+        print("game drawn")
+        episodes_drawn += 1
+    elif(reward > 0.0):
+        print("game won")
+        episodes_won += 1
+    else:
+        print("game lost")
+        episodes_lost += 1
+
+print("games played: " + str(n_episodes) + " games won: " + str(episodes_won) + " games lost: " + str(episodes_lost) + " games drawn: " + str(episodes_drawn))
+print("winrate: " + str((episodes_won/n_episodes)*100) + "% drawrate: " + str((episodes_drawn/n_episodes)*100) + "%")
+
 
 env.close()
